@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3a5f">
+<title>Gürültü Ölçer</title>
+<style>
+  :root { --bg:#f4f6f9; --kart:#fff; --ana:#1f3a5f; --vurgu:#e6783c; --yazi:#1b1f24; --soluk:#6b7380; --iyi:#2e8b57; --kotu:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--yazi); }
+  header { background:var(--ana); color:#fff; padding:14px 18px; }
+  header h1 { margin:0; font-size:18px; }
+  header p { margin:2px 0 0; font-size:12px; opacity:.8; }
+  main { max-width:520px; margin:0 auto; padding:14px; }
+  .kart { background:var(--kart); border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .durum { display:flex; gap:8px; flex-wrap:wrap; font-size:13px; }
+  .etiket { padding:4px 10px; border-radius:20px; background:#eef1f5; color:var(--soluk); }
+  .etiket.iyi { background:#e3f4ea; color:var(--iyi); }
+  .etiket.kotu { background:#fbe7e5; color:var(--kotu); }
+  .gosterge { text-align:center; padding:8px 0; }
+  .db { font-size:72px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .db small { font-size:22px; font-weight:500; color:var(--soluk); }
+  .bar { height:10px; border-radius:6px; background:#e6e9ee; overflow:hidden; margin-top:12px; }
+  .bar > div { height:100%; width:0; background:var(--vurgu); transition:width .1s linear; }
+  .ilerleme > div { background:var(--ana); }
+  button { width:100%; padding:15px; border:0; border-radius:12px; font-size:16px; font-weight:600; background:var(--ana); color:#fff; margin-top:10px; }
+  button.ikincil { background:#e6e9ee; color:var(--yazi); }
+  button:disabled { opacity:.45; }
+  label { display:block; font-size:13px; color:var(--soluk); margin:12px 0 4px; }
+  select, input, textarea { width:100%; padding:11px; font-size:15px; border:1px solid #d5dae1; border-radius:10px; background:#fff; color:var(--yazi); }
+  .izgara { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; text-align:center; margin-top:8px; }
+  .izgara div { background:#f4f6f9; border-radius:10px; padding:8px 2px; }
+  .izgara b { display:block; font-size:17px; }
+  .izgara span { font-size:11px; color:var(--soluk); }
+  .not { font-size:12px; color:var(--soluk); line-height:1.5; }
+  .uyari { background:#fff6e5; border-left:4px solid #f0b43c; padding:10px 12px; border-radius:8px; font-size:13px; margin-bottom:12px; }
+  .gizli { display:none; }
+  details summary { cursor:pointer; font-weight:600; }
+  #mesaj { text-align:center; font-weight:600; margin-top:10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gürültü Ölçer</h1>
+  <p>Ses düzeyini ölç, konumla birlikte gönder</p>
+</header>
+<main>
+  <div id="ayarUyari" class="uyari gizli">Yönetici notu: index.html içindeki <code>KATMAN_URL</code> henüz girilmemiş. Ölçüm yapılabilir ama gönderilemez.</div>
+  <div id="kalUyari" class="uyari gizli">Bu cihaz kalibre edilmemiş. Ölçümler kaydedilir ama yaklaşık değerdir. En alttaki <b>Kalibrasyon</b> bölümüne bakabilirsin.</div>
+
+  <div class="kart">
+    <div class="durum">
+      <span id="gpsDurum" class="etiket">GPS: bekleniyor</span>
+      <span id="micDurum" class="etiket">Mikrofon: kapalı</span>
+      <span id="kuyrukDurum" class="etiket gizli"></span>
+    </div>
+    <div class="gosterge">
+      <div class="db"><span id="anlik">--</span> <small>dB(A)</small></div>
+      <div class="bar"><div id="seviye"></div></div>
+      <div class="bar ilerleme"><div id="ilerleme"></div></div>
+      <div id="sayac" class="not" style="margin-top:6px">Telefonu yerden 1,5 m yükseklikte (omuz hizası), duvardan en az 2 m uzakta tut. Mikrofonu kapatma.</div>
+    </div>
+    <label for="sure">Ölçüm süresi</label>
+    <select id="sure">
+      <option value="60">1 dakika (yalnız deneme)</option>
+      <option value="120">2 dakika</option>
+      <option value="180">3 dakika</option>
+      <option value="240">4 dakika</option>
+      <option value="300" selected>5 dakika</option>
+      <option value="360">6 dakika</option>
+      <option value="420">7 dakika</option>
+      <option value="480">8 dakika</option>
+      <option value="540">9 dakika</option>
+      <option value="600">10 dakika</option>
+    </select>
+    <button id="basla">Ölçümü başlat</button>
+    <button id="durdur" class="ikincil gizli">İptal</button>
+  </div>
+
+  <div id="sonucKart" class="kart gizli">
+    <b>Sonuç</b>
+    <div class="izgara">
+      <div><b id="rLeq">-</b><span>LAeq</span></div>
+      <div><b id="rMax">-</b><span>Maks</span></div>
+      <div><b id="rL10">-</b><span>L10</span></div>
+      <div><b id="rL90">-</b><span>L90</span></div>
+    </div>
+    <label for="kaynak">Baskın gürültü kaynağı</label>
+    <select id="kaynak">
+      <option value="">Seç…</option>
+      <option value="trafik">Karayolu trafiği</option>
+      <option value="insaat">İnşaat / iş makinesi</option>
+      <option value="insan">İnsan kalabalığı / konuşma</option>
+      <option value="eglence">Eğlence mekânı / müzik</option>
+      <option value="ticari">Ticari faaliyet / pazar</option>
+      <option value="okul">Okul / oyun alanı</option>
+      <option value="dogal">Doğal (rüzgâr, kuş, su)</option>
+      <option value="sessiz">Belirgin kaynak yok</option>
+      <option value="diger">Diğer</option>
+    </select>
+    <label for="hava">Hava durumu</label>
+    <select id="hava">
+      <option value="acik_sakin">Açık / sakin</option>
+      <option value="bulutlu">Bulutlu</option>
+      <option value="ruzgarli">Rüzgârlı</option>
+      <option value="yagmurlu">Yağmurlu</option>
+    </select>
+    <label for="notlar">Not (isteğe bağlı)</label>
+    <textarea id="notlar" rows="2" maxlength="500"></textarea>
+    <div id="konumBilgi" class="not" style="margin-top:8px"></div>
+    <button id="gonder">Gönder</button>
+    <div id="mesaj"></div>
+  </div>
+
+  <div class="kart">
+    <details>
+      <summary>Kalibrasyon</summary>
+      <p class="not">Telefon mikrofonları birbirinden farklıdır. Referans telefon (NoiseCapture'da trafikle kalibre edilmiş) ile bu telefonu yan yana, aynı yükseklikte, mikrofonları aynı yöne bakacak şekilde tut. Sesin dalgalanmadığı bir yerde ikisini <b>aynı anda başlatıp aynı sürede</b> ölç. Referans telefonun gösterdiği LAeq dB(A) değerini buraya gir. Uygulama ofseti bu cihaz için hesaplayıp saklar. Kontrol için farklı ses düzeyinde bir yan yana ölçüm daha yap.</p>
+      <label for="refDeger">Referans cihazın LAeq değeri (son ölçüm için)</label>
+      <input id="refDeger" type="number" step="0.1" inputmode="decimal" placeholder="örneğin 62.4">
+      <button id="kalibreEt" class="ikincil">Son ölçüme göre kalibre et</button>
+      <label for="ofset">Ofset (dB) — elle de değiştirilebilir</label>
+      <input id="ofset" type="number" step="0.1" inputmode="decimal">
+      <p id="kalDurum" class="not"></p>
+    </details>
+  </div>
+
+  <p class="not" style="text-align:center">Kaydedilenler: ses düzeyi değerleri, konum, zaman, seçtiğin bilgiler ve anonim bir cihaz kimliği. Ses kaydı tutulmaz; ses telefonundan dışarı çıkmaz.</p>
+</main>
+
+<script>
+// ================== YÖNETİCİ AYARI ==================
+// katman_olustur.py'nin yazdırdığı "GENEL GÖRÜNÜM" katman adresi (sonu /FeatureServer/0)
+const KATMAN_URL = "https://services-eu1.arcgis.com/LHwUjP01iDaGy6Hk/arcgis/rest/services/gurultu_olcumleri_genel/FeatureServer/0";
+// ====================================================
+
+const VARSAYILAN_OFSET = 100;   // kalibrasyonsuz kaba başlangıç değeri
+const GPS_ESIK = 30;            // m; bundan kötü doğrulukta uyarı ver
+const ARALIK_MS = 125;          // "fast" zaman ağırlığına yakın örnekleme
+
+const $ = id => document.getElementById(id);
+const ls = {
+  get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+let cihazId = ls.get("cihazId", null);
+if (!cihazId) { cihazId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); ls.set("cihazId", cihazId); }
+let ofset = ls.get("ofset", VARSAYILAN_OFSET);
+let kalibre = ls.get("kalibre", false);
+$("ofset").value = ofset;
+
+let ctx, analyser, akim, aAgirlik, buf, zamanlayici, wakeLock;
+let kareler = [], konum = null, enIyiKonum = null, sonSonuc = null, olcumBasi = 0;
+
+// ---------- A-ağırlıklandırma (IEC 61672) ----------
+function aKazanc(f) {
+  const f2 = f * f;
+  const ra = (12194 ** 2 * f2 * f2) /
+    ((f2 + 20.6 ** 2) * Math.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194 ** 2));
+  return 20 * Math.log10(ra) + 2.0;
+}
+
+function kareSeviyesi() {
+  // FFT kutularının A-ağırlıklı enerjisi toplanır → ham dB; ofset ile dB(A)'ya taşınır
+  analyser.getFloatFrequencyData(buf);
+  let e = 0;
+  for (let i = 1; i < buf.length; i++) {
+    const v = buf[i];
+    if (v === -Infinity || isNaN(v) || aAgirlik[i] === null) continue;
+    e += Math.pow(10, (v + aAgirlik[i]) / 10);
+  }
+  return e > 0 ? 10 * Math.log10(e) : null;
+}
+
+function istatistik(ham) {
+  const L = ham.map(v => v + ofset).sort((a, b) => a - b);
+  const ort = 10 * Math.log10(L.reduce((s, v) => s + Math.pow(10, v / 10), 0) / L.length);
+  const yuzde = p => L[Math.min(L.length - 1, Math.max(0, Math.round(p * (L.length - 1))))];
+  const hamOrt = 10 * Math.log10(ham.reduce((s, v) => s + Math.pow(10, v / 10), 0) / ham.length);
+  return { leq: ort, max: L[L.length - 1], min: L[0], l10: yuzde(0.9), l90: yuzde(0.1), hamOrt };
+}
+
+// ---------- GPS ----------
+function gpsBaslat() {
+  if (!("geolocation" in navigator)) { gpsEtiket("GPS yok", "kotu"); return; }
+  navigator.geolocation.watchPosition(p => {
+    konum = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, t: Date.now() };
+    if (olcumBasi && (!enIyiKonum || konum.acc < enIyiKonum.acc)) enIyiKonum = konum;
+    gpsEtiket(`GPS: ±${Math.round(konum.acc)} m`, konum.acc <= GPS_ESIK ? "iyi" : "kotu");
+  }, e => gpsEtiket("GPS: izin yok / hata", "kotu"),
+  { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+}
+function gpsEtiket(t, s) { const el = $("gpsDurum"); el.textContent = t; el.className = "etiket " + (s || ""); }
+
+// ---------- Ölçüm ----------
+async function basla() {
+  $("mesaj").textContent = "";
+  try {
+    akim = await navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    $("micDurum").textContent = "Mikrofon: izin yok"; $("micDurum").className = "etiket kotu"; return;
+  }
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  const kaynak = ctx.createMediaStreamSource(akim);
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 4096;
+  analyser.smoothingTimeConstant = 0;
+  analyser.minDecibels = -140; analyser.maxDecibels = 0;
+  kaynak.connect(analyser);
+  buf = new Float32Array(analyser.frequencyBinCount);
+  const df = ctx.sampleRate / analyser.fftSize;
+  aAgirlik = Array.from({ length: buf.length }, (_, i) => {
+    const f = i * df; return (f < 20 || f > 20000) ? null : aKazanc(f);
+  });
+
+  $("micDurum").textContent = "Mikrofon: açık"; $("micDurum").className = "etiket iyi";
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+
+  const sure = +$("sure").value;
+  kareler = []; enIyiKonum = konum; olcumBasi = Date.now();
+  $("basla").classList.add("gizli"); $("durdur").classList.remove("gizli"); $("sonucKart").classList.add("gizli");
+
+  zamanlayici = setInterval(() => {
+    const h = kareSeviyesi();
+    if (h !== null) {
+      kareler.push(h);
+      const v = h + ofset;
+      $("anlik").textContent = v.toFixed(1);
+      $("seviye").style.width = Math.max(0, Math.min(100, (v - 30) / 90 * 100)) + "%";
+    }
+    const gecen = (Date.now() - olcumBasi) / 1000;
+    $("ilerleme").style.width = Math.min(100, gecen / sure * 100) + "%";
+    $("sayac").textContent = `Ölçülüyor… ${Math.max(0, Math.ceil(sure - gecen))} sn`;
+    if (gecen >= sure) bitir(true);
+  }, ARALIK_MS);
+}
+
+function kapat() {
+  clearInterval(zamanlayici);
+  akim?.getTracks().forEach(t => t.stop());
+  ctx?.close();
+  try { wakeLock?.release(); } catch {}
+  $("micDurum").textContent = "Mikrofon: kapalı"; $("micDurum").className = "etiket";
+  $("basla").classList.remove("gizli"); $("durdur").classList.add("gizli");
+}
+
+function bitir(tamam) {
+  const sure = (Date.now() - olcumBasi) / 1000;
+  olcumBasi = 0;
+  kapat();
+  if (!tamam || kareler.length < 20) { $("sayac").textContent = "Ölçüm iptal edildi."; $("ilerleme").style.width = "0"; return; }
+  const s = istatistik(kareler);
+  const k = enIyiKonum || konum;
+  sonSonuc = { ...s, sure: Math.round(sure), konum: k, zaman: Date.now() };
+  $("rLeq").textContent = s.leq.toFixed(1); $("rMax").textContent = s.max.toFixed(1);
+  $("rL10").textContent = s.l10.toFixed(1); $("rL90").textContent = s.l90.toFixed(1);
+  $("anlik").textContent = s.leq.toFixed(1);
+  $("sayac").textContent = "Ölçüm tamamlandı. Bilgileri seçip gönder.";
+  $("konumBilgi").textContent = k
+    ? `Konum: ${k.lat.toFixed(5)}, ${k.lon.toFixed(5)} (±${Math.round(k.acc)} m)` + (k.acc > GPS_ESIK ? " — doğruluk düşük, açık alana çık." : "")
+    : "Konum alınamadı; gönderim için GPS izni gerekli.";
+  $("sonucKart").classList.remove("gizli");
+  $("gonder").disabled = !k;
+}
+
+// ---------- Gönderim ----------
+function gunDilimi(d) {
+  const h = d.getHours();
+  return h >= 7 && h < 12 ? "sabah" : h >= 12 && h < 19 ? "ogle" : h >= 19 && h < 23 ? "aksam" : "gece";
+}
+
+function kayitOlustur() {
+  const s = sonSonuc, r = x => Math.round(x * 10) / 10;
+  return {
+    geometry: { x: s.konum.lon, y: s.konum.lat, spatialReference: { wkid: 4326 } },
+    attributes: {
+      olcum_zamani: s.zaman, gun_dilimi: gunDilimi(new Date(s.zaman)),
+      db_ort: r(s.leq), db_max: r(s.max), db_min: r(s.min), l10: r(s.l10), l90: r(s.l90),
+      ham_ort: r(s.hamOrt), ofset: r(ofset), kalibre: kalibre ? "evet" : "hayir",
+      sure_sn: s.sure, kaynak: $("kaynak").value, hava: $("hava").value,
+      notlar: $("notlar").value.slice(0, 500), gps_dogruluk_m: Math.round(s.konum.acc),
+      cihaz_id: cihazId, cihaz: navigator.userAgent.slice(0, 250)
+    }
+  };
+}
+
+async function postEt(kayitlar) {
+  const govde = new URLSearchParams({ f: "json", features: JSON.stringify(kayitlar) });
+  const r = await fetch(KATMAN_URL.replace(/\/$/, "") + "/addFeatures", { method: "POST", body: govde });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || "Sunucu hatası");
+  if (!j.addResults || j.addResults.some(x => !x.success)) throw new Error("Kayıt reddedildi");
+  return j;
+}
+
+function kuyrukGoster() {
+  const q = ls.get("kuyruk", []), el = $("kuyrukDurum");
+  el.classList.toggle("gizli", q.length === 0);
+  el.textContent = `Gönderilmeyi bekleyen: ${q.length}`; el.className = "etiket kotu" + (q.length ? "" : " gizli");
+}
+
+async function kuyruguGonder() {
+  const q = ls.get("kuyruk", []);
+  if (!q.length || !KATMAN_URL || !navigator.onLine) return;
+  try { await postEt(q); ls.set("kuyruk", []); } catch {}
+  kuyrukGoster();
+}
+
+async function gonder() {
+  if (!$("kaynak").value) { $("mesaj").textContent = "Gürültü kaynağını seç."; return; }
+  if (!KATMAN_URL) { $("mesaj").textContent = "Uygulama ayarı eksik (KATMAN_URL)."; return; }
+  const kayit = kayitOlustur();
+  $("gonder").disabled = true; $("mesaj").textContent = "Gönderiliyor…";
+  try {
+    await postEt([kayit]);
+    $("mesaj").style.color = "var(--iyi)"; $("mesaj").textContent = "Kaydedildi, teşekkürler!";
+    $("notlar").value = ""; $("kaynak").value = "";
+    setTimeout(() => $("sonucKart").classList.add("gizli"), 1800);
+  } catch (e) {
+    const q = ls.get("kuyruk", []); q.push(kayit); ls.set("kuyruk", q);
+    $("mesaj").style.color = "var(--kotu)";
+    $("mesaj").textContent = "Gönderilemedi; telefonda saklandı, bağlantı gelince tekrar denenecek.";
+    kuyrukGoster(); $("gonder").disabled = false;
+  }
+}
+
+// ---------- Kalibrasyon ----------
+function kalGoster() {
+  $("kalUyari").classList.toggle("gizli", kalibre);
+  $("kalDurum").textContent = kalibre ? `Bu cihaz kalibre edildi (ofset ${ofset.toFixed(1)} dB).` : "Henüz kalibre edilmedi.";
+}
+$("kalibreEt").onclick = () => {
+  const ref = parseFloat($("refDeger").value);
+  if (!sonSonuc || isNaN(ref)) { $("kalDurum").textContent = "Önce bir ölçüm yap ve referans değeri gir."; return; }
+  ofset = ofset + (ref - sonSonuc.leq);  // sonuçlar eski ofsetle hesaplandı
+  kalibre = true; ls.set("ofset", ofset); ls.set("kalibre", true);
+  $("ofset").value = ofset.toFixed(1); kalGoster();
+  sonSonuc = null; $("sonucKart").classList.add("gizli");
+  $("sayac").textContent = "Kalibre edildi. Yeni ölçüm yapabilirsin.";
+};
+$("ofset").onchange = () => {
+  const v = parseFloat($("ofset").value); if (isNaN(v)) return;
+  ofset = v; ls.set("ofset", v); kalibre = true; ls.set("kalibre", true); kalGoster();
+};
+
+// ---------- Başlat ----------
+$("basla").onclick = basla;
+$("durdur").onclick = () => bitir(false);
+$("gonder").onclick = gonder;
+window.addEventListener("online", kuyruguGonder);
+if (!KATMAN_URL) $("ayarUyari").classList.remove("gizli");
+if (!window.isSecureContext) $("micDurum").textContent = "Mikrofon: HTTPS gerekli";
+kalGoster(); kuyrukGoster(); gpsBaslat(); kuyruguGonder();
+</script>
+</body>
+</html>

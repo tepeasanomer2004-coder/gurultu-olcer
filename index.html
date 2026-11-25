@@ -47,7 +47,6 @@
 </header>
 <main>
   <div id="ayarUyari" class="uyari gizli">Yönetici notu: index.html içindeki <code>KATMAN_URL</code> henüz girilmemiş. Ölçüm yapılabilir ama gönderilemez.</div>
-  <div id="kalUyari" class="uyari gizli">Bu cihaz kalibre edilmemiş. Ölçümler kaydedilir ama yaklaşık değerdir. En alttaki <b>Kalibrasyon</b> bölümüne bakabilirsin.</div>
 
   <div class="kart">
     <div class="durum">
@@ -73,6 +72,11 @@
       <option value="480">8 dakika</option>
       <option value="540">9 dakika</option>
       <option value="600">10 dakika</option>
+      <option value="660">11 dakika</option>
+      <option value="720">12 dakika</option>
+      <option value="780">13 dakika</option>
+      <option value="840">14 dakika</option>
+      <option value="900">15 dakika</option>
     </select>
     <button id="basla">Ölçümü başlat</button>
     <button id="durdur" class="ikincil gizli">İptal</button>
@@ -113,19 +117,6 @@
     <div id="mesaj"></div>
   </div>
 
-  <div class="kart">
-    <details>
-      <summary>Kalibrasyon</summary>
-      <p class="not">Telefon mikrofonları birbirinden farklıdır. Referans telefon (NoiseCapture'da trafikle kalibre edilmiş) ile bu telefonu yan yana, aynı yükseklikte, mikrofonları aynı yöne bakacak şekilde tut. Sesin dalgalanmadığı bir yerde ikisini <b>aynı anda başlatıp aynı sürede</b> ölç. Referans telefonun gösterdiği LAeq dB(A) değerini buraya gir. Uygulama ofseti bu cihaz için hesaplayıp saklar. Kontrol için farklı ses düzeyinde bir yan yana ölçüm daha yap.</p>
-      <label for="refDeger">Referans cihazın LAeq değeri (son ölçüm için)</label>
-      <input id="refDeger" type="number" step="0.1" inputmode="decimal" placeholder="örneğin 62.4">
-      <button id="kalibreEt" class="ikincil">Son ölçüme göre kalibre et</button>
-      <label for="ofset">Ofset (dB) — elle de değiştirilebilir</label>
-      <input id="ofset" type="number" step="0.1" inputmode="decimal">
-      <p id="kalDurum" class="not"></p>
-    </details>
-  </div>
-
   <p class="not" style="text-align:center">Kaydedilenler: ses düzeyi değerleri, konum, zaman, seçtiğin bilgiler ve anonim bir cihaz kimliği. Ses kaydı tutulmaz; ses telefonundan dışarı çıkmaz.</p>
 </main>
 
@@ -135,7 +126,7 @@
 const KATMAN_URL = "https://services-eu1.arcgis.com/LHwUjP01iDaGy6Hk/arcgis/rest/services/gurultu_olcumleri_genel/FeatureServer/0";
 // ====================================================
 
-const VARSAYILAN_OFSET = 100;   // kalibrasyonsuz kaba başlangıç değeri
+const VARSAYILAN_OFSET = 100;   // sabit ofset; telefon düzeltmesi sonradan analizde ham_ort + cihaz_id ile yapılır
 const GPS_ESIK = 30;            // m; bundan kötü doğrulukta uyarı ver
 const ARALIK_MS = 125;          // "fast" zaman ağırlığına yakın örnekleme
 
@@ -147,9 +138,8 @@ const ls = {
 
 let cihazId = ls.get("cihazId", null);
 if (!cihazId) { cihazId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); ls.set("cihazId", cihazId); }
-let ofset = ls.get("ofset", VARSAYILAN_OFSET);
-let kalibre = ls.get("kalibre", false);
-$("ofset").value = ofset;
+const ofset = VARSAYILAN_OFSET;   // eski sürümde tarayıcıya kaydedilmiş ofset kullanılmaz
+const kalibre = false;
 
 let ctx, analyser, akim, aAgirlik, buf, zamanlayici, wakeLock;
 let kareler = [], konum = null, enIyiKonum = null, sonSonuc = null, olcumBasi = 0;
@@ -328,25 +318,6 @@ async function gonder() {
   }
 }
 
-// ---------- Kalibrasyon ----------
-function kalGoster() {
-  $("kalUyari").classList.toggle("gizli", kalibre);
-  $("kalDurum").textContent = kalibre ? `Bu cihaz kalibre edildi (ofset ${ofset.toFixed(1)} dB).` : "Henüz kalibre edilmedi.";
-}
-$("kalibreEt").onclick = () => {
-  const ref = parseFloat($("refDeger").value);
-  if (!sonSonuc || isNaN(ref)) { $("kalDurum").textContent = "Önce bir ölçüm yap ve referans değeri gir."; return; }
-  ofset = ofset + (ref - sonSonuc.leq);  // sonuçlar eski ofsetle hesaplandı
-  kalibre = true; ls.set("ofset", ofset); ls.set("kalibre", true);
-  $("ofset").value = ofset.toFixed(1); kalGoster();
-  sonSonuc = null; $("sonucKart").classList.add("gizli");
-  $("sayac").textContent = "Kalibre edildi. Yeni ölçüm yapabilirsin.";
-};
-$("ofset").onchange = () => {
-  const v = parseFloat($("ofset").value); if (isNaN(v)) return;
-  ofset = v; ls.set("ofset", v); kalibre = true; ls.set("kalibre", true); kalGoster();
-};
-
 // ---------- Başlat ----------
 $("basla").onclick = basla;
 $("durdur").onclick = () => bitir(false);
@@ -354,7 +325,7 @@ $("gonder").onclick = gonder;
 window.addEventListener("online", kuyruguGonder);
 if (!KATMAN_URL) $("ayarUyari").classList.remove("gizli");
 if (!window.isSecureContext) $("micDurum").textContent = "Mikrofon: HTTPS gerekli";
-kalGoster(); kuyrukGoster(); gpsBaslat(); kuyruguGonder();
+kuyrukGoster(); gpsBaslat(); kuyruguGonder();
 </script>
 </body>
 </html>

@@ -58,6 +58,10 @@
       <option value="S4">S4</option>
       <option value="S5">S5</option>
       <option value="S6">S6</option>
+      <option value="S7">S7</option>
+      <option value="S8">S8</option>
+      <option value="S9">S9</option>
+      <option value="S10">S10</option>
     </select>
     <div class="durum" style="margin-top:12px">
       <span id="gpsDurum" class="etiket">GPS: bekleniyor</span>
@@ -148,7 +152,7 @@ const ls = {
 
 let cihazId = ls.get("cihazId", null);
 if (!cihazId) { cihazId = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); ls.set("cihazId", cihazId); }
-// Ölçen kişi (S1–S6): telefonda hatırlanır, her kayda yazılır; kalibrasyon eşleştirmesi buna dayanır
+// Ölçen kişi (S1–S10): telefonda hatırlanır, her kayda yazılır; kalibrasyon eşleştirmesi buna dayanır
 $("olcen").value = ls.get("olcen", "");
 $("olcen").onchange = () => ls.set("olcen", $("olcen").value);
 const ofset = VARSAYILAN_OFSET;   // eski sürümde tarayıcıya kaydedilmiş ofset kullanılmaz
@@ -200,7 +204,7 @@ function gpsEtiket(t, s) { const el = $("gpsDurum"); el.textContent = t; el.clas
 // ---------- Ölçüm ----------
 async function basla() {
   $("mesaj").textContent = "";
-  if (!$("olcen").value) { $("sayac").textContent = "Önce en üstten ölçen kişiyi (S1–S6) seç."; $("olcen").focus(); return; }
+  if (!$("olcen").value) { $("sayac").textContent = "Önce en üstten ölçen kişiyi (S1–S10) seç."; $("olcen").focus(); return; }
   try {
     akim = await navigator.mediaDevices.getUserMedia({ audio: {
       echoCancellation: false, noiseSuppression: false, autoGainControl: false } });

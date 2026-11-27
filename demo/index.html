@@ -38,6 +38,14 @@
   .gizli { display:none; }
   details summary { cursor:pointer; font-weight:600; }
   #mesaj { text-align:center; font-weight:600; margin-top:10px; }
+  .dSeviye { margin-top:14px; }
+  .dCubuk { position:relative; height:12px; border-radius:6px; background:linear-gradient(90deg,#fde68a,#f28c28 50%,#b3191b); }
+  #dIsaret { position:absolute; top:-5px; width:4px; height:22px; background:var(--ana); border-radius:2px; left:0; transition:left .4s; }
+  .dOlcek { display:flex; justify-content:space-between; font-size:11px; color:var(--soluk); margin-top:4px; }
+  .dOzet { background:#f4f6f9; border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.65; margin-top:10px; }
+  .dDugmeler { display:flex; gap:8px; }
+  .dDugmeler button { flex:1; }
+  .izgara span { line-height:1.25; }
 </style>
 </head>
 <body>
@@ -46,7 +54,7 @@
   <p>Tanıtım sürümü · ölçüm yapılır, kaydedilmez</p>
 </header>
 <main>
-  <div id="ayarUyari" class="uyari gizli"><b>Tanıtım sürümü.</b> Telefonunla ses düzeyini ölçebilirsin; sonuçlar hiçbir yere gönderilmez ve kaydedilmez. Bu uygulama Bakırçay Üniversitesi CBS stüdyosu dersinde saha ölçümleri için geliştirildi.</div>
+  <div id="ayarUyari" class="uyari gizli"><b>Tanıtım sürümü.</b> Telefonunla ses düzeyini ölç, sonucunu ve konumlu sonuç haritanı gör. Hiçbir veri bir yere gönderilmez veya kaydedilmez. Bu uygulama Bakırçay Üniversitesi CBS stüdyosu dersinde saha ölçümleri için geliştirildi.</div>
 
   <div class="kart">
     <label for="olcen" style="display:none">Ölçen kişi</label>
@@ -97,13 +105,20 @@
   </div>
 
   <div id="sonucKart" class="kart gizli">
-    <b>Sonuç</b>
+    <b>Ölçüm sonucu</b>
     <div class="izgara">
-      <div><b id="rLeq">-</b><span>LAeq</span></div>
-      <div><b id="rMax">-</b><span>Maks</span></div>
-      <div><b id="rL10">-</b><span>L10</span></div>
-      <div><b id="rL90">-</b><span>L90</span></div>
+      <div><b id="rLeq">-</b><span>Ortalama ses düzeyi</span></div>
+      <div><b id="rMax">-</b><span>En gürültülü an</span></div>
+      <div><b id="rL10">-</b><span>Gürültülü anlar</span></div>
+      <div><b id="rL90">-</b><span>Arka plan sesi</span></div>
     </div>
+    <div class="dSeviye">
+      <div class="dCubuk"><div id="dIsaret"></div></div>
+      <div class="dOlcek"><span>30</span><span>45</span><span>60</span><span>75</span><span>90 dB(A)</span></div>
+    </div>
+    <label>Ölçüm boyunca ses düzeyi, dB(A)</label>
+    <canvas id="dGrafik" style="width:100%;height:150px;display:block"></canvas>
+    <p class="not" style="margin-top:8px">Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır ve telefona göre değişebilir.</p>
     <label for="kaynak">Baskın gürültü kaynağı</label>
     <select id="kaynak">
       <option value="">Seç…</option>
@@ -127,7 +142,14 @@
     <label for="notlar">Not (isteğe bağlı)</label>
     <textarea id="notlar" rows="2" maxlength="500"></textarea>
     <div id="konumBilgi" class="not" style="margin-top:8px"></div>
-    <button id="gonder">Gönder (tanıtım: kaydedilmez)</button>
+    <button id="gonder" style="display:none"></button>
+    <button id="kartOlustur">Sonuç haritamı oluştur</button>
+    <div id="dOzet" class="dOzet gizli"></div>
+    <div id="dKart" class="gizli">
+      <img id="dKartResim" alt="Sonuç haritası" style="width:100%;border-radius:12px;margin-top:12px;display:block">
+      <div class="dDugmeler"><button id="dIndir">İndir</button><button id="dPaylas" class="ikincil">Paylaş</button></div>
+      <p class="not" style="margin-top:8px">Konum gizlilik için yaklaşık (~100 m) gösterilir. Kart yalnızca telefonunda üretilir; hiçbir yere gönderilmez. Paylaşırken konumunun görüneceğini unutma.</p>
+    </div>
     <div id="mesaj"></div>
   </div>
 
@@ -266,11 +288,12 @@ function bitir(tamam) {
   $("rLeq").textContent = s.leq.toFixed(1); $("rMax").textContent = s.max.toFixed(1);
   $("rL10").textContent = s.l10.toFixed(1); $("rL90").textContent = s.l90.toFixed(1);
   $("anlik").textContent = s.leq.toFixed(1);
-  $("sayac").textContent = "Ölçüm tamamlandı. Bilgileri seçip gönder.";
+  $("sayac").textContent = "Ölçüm tamamlandı. Kaynağı ve havayı seçip sonuç haritanı oluşturabilirsin.";
   $("konumBilgi").textContent = k
     ? `Konum: ${k.lat.toFixed(5)}, ${k.lon.toFixed(5)} (±${Math.round(k.acc)} m)` + (k.acc > GPS_ESIK ? " — doğruluk düşük, açık alana çık." : "")
-    : "Konum alınamadı; gönderim için GPS izni gerekli.";
+    : "Konum alınamadı; sonuç haritası konumsuz oluşturulur.";
   $("sonucKart").classList.remove("gizli");
+  demoSonucGoster(s);
   $("gonder").disabled = !k;
 }
 
@@ -319,7 +342,7 @@ async function kuyruguGonder() {
 
 async function gonder() {
   if (!$("kaynak").value) { $("mesaj").textContent = "Gürültü kaynağını seç."; return; }
-  if (!KATMAN_URL) { $("mesaj").style.color = "var(--soluk)"; $("mesaj").textContent = "Tanıtım sürümünde ölçümler gönderilmez. Denediğin için teşekkürler!"; return; }
+  if (!KATMAN_URL) { $("mesaj").textContent = "Uygulama ayarı eksik (KATMAN_URL)."; return; }
   const kayit = kayitOlustur();
   $("gonder").disabled = true; $("mesaj").textContent = "Gönderiliyor…";
   try {
@@ -334,6 +357,184 @@ async function gonder() {
     kuyrukGoster(); $("gonder").disabled = false;
   }
 }
+
+// ---------- Tanıtım: seviye çubuğu, grafik, özet ve harita kartı ----------
+const D_MIN = 30, D_MAX = 90, D_LACIVERT = "#17304f";
+const tr1 = v => v.toFixed(1).replace(".", ",");
+const esc = t => String(t).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+
+function dSaniyelik() {  // 125 ms'lik kareleri saniyelik enerjetik ortalamaya çevirir
+  const n = Math.round(1000 / ARALIK_MS), d = [];
+  for (let i = 0; i < kareler.length; i += n) {
+    const p = kareler.slice(i, i + n);
+    d.push(10 * Math.log10(p.reduce((s, v) => s + Math.pow(10, (v + ofset) / 10), 0) / p.length));
+  }
+  return d;
+}
+function dRenk(v) {
+  const t = Math.max(0, Math.min(1, (v - D_MIN) / (D_MAX - D_MIN)));
+  const a = [[253, 230, 138], [242, 140, 40], [179, 25, 27]], k = t < 0.5 ? 0 : 1, u = t < 0.5 ? t * 2 : (t - 0.5) * 2;
+  return "rgb(" + a[k].map((x, i) => Math.round(x + (a[k + 1][i] - x) * u)).join(",") + ")";
+}
+function dYuvarlakDortgen(g, x, y, w, h, r) {
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
+}
+function dGrafikCiz(s) {
+  const cv = $("dGrafik"), r = window.devicePixelRatio || 1, W = cv.clientWidth * r, H = 150 * r;
+  cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"), d = dSaniyelik();
+  g.clearRect(0, 0, W, H);
+  if (d.length < 2) return;
+  const lo = Math.floor(Math.min(...d) / 10) * 10, hi = Math.ceil(Math.max(...d) / 10) * 10 + (Math.max(...d) % 10 === 0 ? 10 : 0);
+  const sol = 34 * r, sag = 10 * r, ust = 10 * r, alt = 22 * r;
+  const sx = i => sol + i / (d.length - 1) * (W - sol - sag), sy = v => H - alt - (v - lo) / (hi - lo) * (H - ust - alt);
+  g.font = `${11 * r}px system-ui, sans-serif`; g.lineWidth = r;
+  for (let v = lo; v <= hi; v += 10) {
+    g.strokeStyle = "#e6e9ee"; g.beginPath(); g.moveTo(sol, sy(v)); g.lineTo(W - sag, sy(v)); g.stroke();
+    g.fillStyle = "#6b7380"; g.fillText(v, 2 * r, sy(v) + 4 * r);
+  }
+  const s1 = "0 sn", s2 = d.length >= 60 ? `${Math.round(d.length / 60)} dk` : `${d.length} sn`;
+  g.fillText(s1, sol, H - 5 * r); g.fillText(s2, W - sag - g.measureText(s2).width, H - 5 * r);
+  const grd = g.createLinearGradient(0, sy(hi), 0, sy(lo));
+  grd.addColorStop(0, "rgba(179,25,27,.35)"); grd.addColorStop(1, "rgba(253,230,138,.30)");
+  g.beginPath(); g.moveTo(sx(0), sy(lo));
+  d.forEach((v, i) => g.lineTo(sx(i), sy(v)));
+  g.lineTo(sx(d.length - 1), sy(lo)); g.closePath(); g.fillStyle = grd; g.fill();
+  g.beginPath(); d.forEach((v, i) => i ? g.lineTo(sx(i), sy(v)) : g.moveTo(sx(i), sy(v)));
+  g.strokeStyle = "#e6783c"; g.lineWidth = 2 * r; g.stroke();
+  g.setLineDash([5 * r, 4 * r]); g.strokeStyle = "#1f3a5f"; g.lineWidth = 1.5 * r;
+  g.beginPath(); g.moveTo(sol, sy(s.leq)); g.lineTo(W - sag, sy(s.leq)); g.stroke(); g.setLineDash([]);
+  g.fillStyle = "#1f3a5f"; g.font = `bold ${11 * r}px system-ui, sans-serif`;
+  g.fillText(`ortalama ${tr1(s.leq)}`, sol + 4 * r, sy(s.leq) - 5 * r);
+}
+function demoSonucGoster(s) {
+  const t = Math.max(0, Math.min(1, (s.leq - D_MIN) / (D_MAX - D_MIN)));
+  $("dIsaret").style.left = `calc(${(t * 100).toFixed(1)}% - 2px)`;
+  ["rLeq", "rMax", "rL10", "rL90"].forEach((id, i) => $(id).textContent = tr1([s.leq, s.max, s.l10, s.l90][i]));
+  $("dOzet").classList.add("gizli"); $("dKart").classList.add("gizli");
+  $("kartOlustur").textContent = "Sonuç haritamı oluştur";
+  requestAnimationFrame(() => dGrafikCiz(s));
+}
+function dOzet() {
+  const s = sonSonuc, z = new Date(s.zaman), k = s.konum;
+  return {
+    kaynak: $("kaynak").value ? $("kaynak").selectedOptions[0].text : "belirtilmedi",
+    hava: $("hava").selectedOptions[0].text,
+    not: $("notlar").value.trim(),
+    tarih: z.toLocaleDateString("tr-TR") + " " + z.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+    sure: s.sure >= 60 ? `${Math.round(s.sure / 60)} dk` : `${s.sure} sn`,
+    gps: k ? `±${Math.round(k.acc)} m` : "konum yok"
+  };
+}
+function dKaro(z, x, y) {
+  return new Promise(res => {
+    const im = new Image(); im.crossOrigin = "anonymous";
+    im.onload = () => res(im); im.onerror = () => res(null);
+    im.src = `https://server.arcgisonline.com/arcgis/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/${z}/${y}/${x}`;
+  });
+}
+function dSigdir(g, metin, maks, boyut, kalin) {  // metni genişliğe sığdırır
+  let b = boyut;
+  do { g.font = `${kalin ? "bold " : ""}${b}px system-ui, sans-serif`; b -= 1; } while (g.measureText(metin).width > maks && b > 14);
+}
+async function dKartCiz() {
+  const s = sonSonuc, o = dOzet(), W = 1080, H = 1350;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.fillStyle = D_LACIVERT; g.fillRect(0, 0, W, H);
+  g.fillStyle = "#fff"; g.font = "bold 46px system-ui, sans-serif"; g.fillText("Gürültü Ölçer", 60, 92);
+  g.fillStyle = "#c3cfdc"; g.font = "28px system-ui, sans-serif"; g.fillText(o.tarih, 60, 138);
+  g.fillStyle = "#d9a441"; g.fillRect(60, 160, 110, 6);
+  // harita
+  const mx = 40, my = 196, mw = W - 80, mh = 700;
+  g.save(); dYuvarlakDortgen(g, mx, my, mw, mh, 26); g.clip();
+  g.fillStyle = "#e8e8e8"; g.fillRect(mx, my, mw, mh);
+  const cx = mx + mw / 2, cy = my + mh / 2;
+  if (s.konum) {
+    const z = 15, n = 2 ** z;
+    const lat = Math.round(s.konum.lat * 1000) / 1000, lon = Math.round(s.konum.lon * 1000) / 1000;  // ~100 m
+    const la = lat * Math.PI / 180;
+    const px = (lon + 180) / 360 * n * 256, py = (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * n * 256;
+    const x0 = px - mw / 2, y0 = py - mh / 2, karolar = [];
+    for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + mw) / 256); tx++)
+      for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + mh) / 256); ty++) karolar.push([tx, ty]);
+    const resimler = await Promise.all(karolar.map(([tx, ty]) => dKaro(z, tx, ty)));
+    resimler.forEach((im, i) => { if (im) g.drawImage(im, mx + karolar[i][0] * 256 - x0, my + karolar[i][1] * 256 - y0); });
+    const mpp = 156543.03392 * Math.cos(la) / n, halka = Math.max(30, 100 / mpp);
+    g.fillStyle = "rgba(23,48,79,.14)"; g.beginPath(); g.arc(cx, cy, halka, 0, 2 * Math.PI); g.fill();
+    g.strokeStyle = "rgba(23,48,79,.45)"; g.lineWidth = 2; g.setLineDash([8, 6]); g.stroke(); g.setLineDash([]);
+    if (!resimler.some(Boolean)) { g.fillStyle = "#6b7380"; g.font = "26px system-ui, sans-serif"; g.fillText("Altlık yüklenemedi", mx + 30, my + 50); }
+    g.fillStyle = "rgba(255,255,255,.88)"; g.fillRect(mx + mw - 330, my + mh - 36, 330, 36);
+    g.fillStyle = "#555"; g.font = "20px system-ui, sans-serif"; g.fillText("Altlık: Esri, World Light Gray Canvas", mx + mw - 318, my + mh - 11);
+  } else {
+    g.fillStyle = "#6b7380"; g.font = "30px system-ui, sans-serif"; g.fillText("Konum alınamadı", mx + 40, my + 60);
+  }
+  g.fillStyle = dRenk(s.leq); g.strokeStyle = "#fff"; g.lineWidth = 7;
+  g.beginPath(); g.arc(cx, cy, 28, 0, 2 * Math.PI); g.fill(); g.stroke();
+  const et = `${tr1(s.leq)} dB(A)`; g.font = "bold 50px system-ui, sans-serif";
+  const ew = g.measureText(et).width;
+  g.fillStyle = "rgba(255,255,255,.96)"; dYuvarlakDortgen(g, cx + 44, cy - 78, ew + 44, 78, 18); g.fill();
+  g.fillStyle = D_LACIVERT; g.fillText(et, cx + 66, cy - 22);
+  g.restore();
+  // değerler
+  const kutuY = 930, kw = (W - 80 - 3 * 16) / 4;
+  [["Ortalama", s.leq], ["En gürültülü an", s.max], ["Gürültülü anlar", s.l10], ["Arka plan", s.l90]].forEach(([ad, v], i) => {
+    const x = 40 + i * (kw + 16);
+    g.fillStyle = "#223f63"; dYuvarlakDortgen(g, x, kutuY, kw, 116, 16); g.fill();
+    g.fillStyle = "#fff"; g.font = "bold 44px system-ui, sans-serif"; g.fillText(tr1(v), x + 22, kutuY + 58);
+    g.fillStyle = "#c3cfdc"; dSigdir(g, ad, kw - 40, 22, false); g.fillText(ad, x + 22, kutuY + 94);
+  });
+  // seviye çubuğu
+  const cy2 = 1090, gr = g.createLinearGradient(40, 0, W - 40, 0);
+  gr.addColorStop(0, "#fde68a"); gr.addColorStop(0.5, "#f28c28"); gr.addColorStop(1, "#b3191b");
+  g.fillStyle = gr; dYuvarlakDortgen(g, 40, cy2, W - 80, 18, 9); g.fill();
+  const t = Math.max(0, Math.min(1, (s.leq - D_MIN) / (D_MAX - D_MIN))), ix = 40 + t * (W - 80);
+  g.fillStyle = "#fff"; g.fillRect(ix - 4, cy2 - 10, 8, 38);
+  g.fillStyle = "#c3cfdc"; g.font = "20px system-ui, sans-serif";
+  [30, 45, 60, 75, 90].forEach((v, i) => { const lx = 40 + i / 4 * (W - 80), m = String(v); g.fillText(m, Math.min(lx, W - 40 - g.measureText(m).width), cy2 + 50); });
+  // özet
+  const ozet = `Kaynak: ${o.kaynak}  ·  Hava: ${o.hava}  ·  Süre: ${o.sure}  ·  GPS ${o.gps}`;
+  g.fillStyle = "#fff"; dSigdir(g, ozet, W - 120, 28, false); g.fillText(ozet, 60, 1196);
+  if (o.not) { const nt = "Not: " + (o.not.length > 70 ? o.not.slice(0, 69) + "…" : o.not); g.fillStyle = "#dfe5ec"; dSigdir(g, nt, W - 120, 26, false); g.fillText(nt, 60, 1238); }
+  g.fillStyle = "#9fb1c6"; g.font = "21px system-ui, sans-serif";
+  g.fillText("Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır. Konum ~100 m yuvarlanmıştır.", 60, 1282);
+  g.fillStyle = "#d9a441"; g.font = "bold 22px system-ui, sans-serif";
+  g.fillText("Bakırçay Üniversitesi · CBS Stüdyosu · tepeasanomer2004-coder.github.io/gurultu-olcer/demo", 60, 1318);
+  return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("resim üretilemedi")), "image/png"));
+}
+let dBlob = null;
+$("kartOlustur").onclick = async () => {
+  if (!sonSonuc) return;
+  const o = dOzet();
+  $("dOzet").innerHTML = `<b>Özet</b><br>Kaynak: ${esc(o.kaynak)}<br>Hava: ${esc(o.hava)}`
+    + (o.not ? `<br>Not: ${esc(o.not)}` : "") + `<br>Tarih–saat: ${esc(o.tarih)}<br>Süre: ${esc(o.sure)} · GPS doğruluğu: ${esc(o.gps)}`;
+  $("dOzet").classList.remove("gizli");
+  $("kartOlustur").disabled = true; $("kartOlustur").textContent = "Harita hazırlanıyor…";
+  try {
+    dBlob = await dKartCiz();
+    $("dKartResim").src = URL.createObjectURL(dBlob);
+    $("dKart").classList.remove("gizli");
+    $("mesaj").textContent = "";
+  } catch (e) {
+    $("mesaj").textContent = "Harita oluşturulamadı: " + e.message;
+  }
+  $("kartOlustur").disabled = false; $("kartOlustur").textContent = "Sonuç haritamı yeniden oluştur";
+};
+$("dIndir").onclick = () => {
+  if (!dBlob) return;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(dBlob); a.download = "gurultu_olcumum.png";
+  document.body.appendChild(a); a.click(); a.remove();
+};
+$("dPaylas").onclick = async () => {
+  if (!dBlob) return;
+  const f = new File([dBlob], "gurultu_olcumum.png", { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: "Gürültü Ölçer", text: "Gürültü ölçümüm" }); } catch {}
+  } else {
+    $("dIndir").click();
+  }
+};
 
 // ---------- Başlat ----------
 $("basla").onclick = basla;

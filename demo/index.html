@@ -118,6 +118,13 @@
       <div class="bar ilerleme"><div id="ilerleme"></div></div>
       <div id="sayac" class="not" style="margin-top:6px">Telefonu yerden 1,5 m yükseklikte (omuz hizası), duvardan en az 2 m uzakta tut. Mikrofonu kapatma.</div>
     </div>
+    <label for="dMod">Ne ölçüyorsun?</label>
+    <select id="dMod">
+      <option value="genel">Genel ölçüm</option>
+      <option value="uyku">Uyku odam yeterince sessiz mi?</option>
+      <option value="ders">Ders çalışma yerim yeterince sessiz mi?</option>
+      <option value="kafe">Bu kafe ne kadar gürültülü?</option>
+    </select>
     <label for="sure">Ölçüm süresi</label>
     <select id="sure">
       <option value="15">15 saniye</option>
@@ -154,6 +161,7 @@
       <div class="dCubuk"><div id="dIsaret"></div></div>
       <div class="dOlcek"><span>30</span><span>45</span><span>60</span><span>75</span><span>90 dB(A)</span></div>
     </div>
+    <div id="dModSonuc" class="dOzet gizli"></div>
     <label>Ölçüm boyunca ses düzeyi, dB(A)</label>
     <canvas id="dGrafik" style="width:100%;height:150px;display:block"></canvas>
     <p class="not" style="margin-top:8px">Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır ve telefona göre değişebilir.</p>
@@ -403,7 +411,7 @@ async function gonder() {
 // ---------- Tanıtım sürümü ----------
 const D_MIN = 30, D_MAX = 90, D_ZEMIN = "#0b1020", D_KART = "#151c33", D_VURGU = "#22d3ee";
 const SAHA = [{"lat": 38.55428, "lon": 27.04696, "v": 52.2, "k": "insan"}, {"lat": 38.5606, "lon": 27.04504, "v": 61.8, "k": "trafik"}, {"lat": 38.54901, "lon": 27.03987, "v": 52.1, "k": "trafik"}, {"lat": 38.54919, "lon": 27.04877, "v": 49.6, "k": "trafik"}, {"lat": 38.55442, "lon": 27.04975, "v": 49.5, "k": "trafik"}, {"lat": 38.56023, "lon": 27.04567, "v": 50.1, "k": "insan"}, {"lat": 38.54884, "lon": 27.04398, "v": 52.4, "k": "trafik"}, {"lat": 38.54949, "lon": 27.04842, "v": 50.1, "k": "trafik"}, {"lat": 38.55468, "lon": 27.04814, "v": 56.4, "k": "trafik"}, {"lat": 38.55187, "lon": 27.04905, "v": 50.2, "k": "trafik"}];
-const SOZLUK = {"Gürültü Ölçer": "Noise Meter", "Tanıtım sürümü · ölçüm yapılır, kaydedilmez": "Demo version · measures, never saves", "Tanıtım sürümü.": "Demo version.", "Telefonunla ses düzeyini ölç, sonucunu ve konumlu sonuç haritanı gör. Hiçbir veri bir yere gönderilmez veya kaydedilmez. Bu uygulama Bakırçay Üniversitesi CBS stüdyosu dersinde saha ölçümleri için geliştirildi.": "Measure the sound level with your phone and see your result on a map. No data is sent or stored. This app was built for field measurements in a GIS studio course at Bakırçay University.", "GPS: bekleniyor": "GPS: waiting", "GPS: izin yok / hata": "GPS: no permission / error", "GPS yok": "No GPS", "Mikrofon: kapalı": "Microphone: off", "Mikrofon: açık": "Microphone: on", "Mikrofon: izin yok": "Microphone: no permission", "Mikrofon: HTTPS gerekli": "Microphone: HTTPS required", "Telefonu yerden 1,5 m yükseklikte (omuz hizası), duvardan en az 2 m uzakta tut. Mikrofonu kapatma.": "Hold the phone 1.5 m above the ground (shoulder height), at least 2 m from walls. Don't cover the microphone.", "Ölçüm süresi": "Duration", "Ölçümü başlat": "Start measuring", "İptal": "Cancel", "Ölçüm iptal edildi.": "Measurement cancelled.", "Ölçüm tamamlandı. Kaynağı ve havayı seçip sonuç haritanı oluşturabilirsin.": "Done. Pick the source and weather, then create your result map.", "Ölçüm sonucu": "Your result", "Ortalama ses düzeyi": "Average level", "En gürültülü an": "Loudest moment", "Gürültülü anlar": "Noisy moments", "Arka plan sesi": "Background", "Arka plan": "Background", "Ortalama": "Average", "Ölçüm boyunca ses düzeyi, dB(A)": "Sound level during measurement, dB(A)", "Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır ve telefona göre değişebilir.": "Phone microphones are not calibrated; values are approximate and vary by phone.", "Rozetlerin": "Your badges", "Baskın gürültü kaynağı": "Main noise source", "Seç…": "Choose…", "Karayolu trafiği": "Road traffic", "İnşaat / iş makinesi": "Construction / machinery", "İnsan kalabalığı / konuşma": "Crowd / talking", "Eğlence mekânı / müzik": "Venue / music", "Ticari faaliyet / pazar": "Shops / market", "Okul / oyun alanı": "School / playground", "Doğal (rüzgâr, kuş, su)": "Natural (wind, birds, water)", "Belirgin kaynak yok": "No clear source", "Diğer": "Other", "Hava durumu": "Weather", "Açık / sakin": "Clear / calm", "Bulutlu": "Cloudy", "Rüzgârlı": "Windy", "Yağmurlu": "Rainy", "Not (isteğe bağlı)": "Note (optional)", "Konum alınamadı; sonuç haritası konumsuz oluşturulur.": "No location; the result map is created without it.", "Haritada sağ üstten \"Saha ölçümlerimiz\" katmanını açıp kapatabilirsin.": "Use the top-right control to show or hide \"Our field measurements\".", "Sonuç haritamı oluştur": "Create my result map", "Sonuç haritamı yeniden oluştur": "Recreate my result map", "Harita hazırlanıyor…": "Preparing map…", "İndir": "Download", "Paylaş": "Share", "Konum gizlilik için yaklaşık (~100 m) gösterilir. Kart yalnızca telefonunda üretilir; hiçbir yere gönderilmez. Paylaşırken konumunun görüneceğini unutma.": "Location is shown approximately (~100 m) for privacy. The card is made on your phone and never sent anywhere. Your location is visible when you share it.", "Tanıtım sürümünde hiçbir veri gönderilmez veya kaydedilmez. Ses kaydı tutulmaz; ses telefonundan dışarı çıkmaz.": "The demo never sends or stores data. No audio is recorded; sound never leaves your phone.", "Özet": "Summary", "Kaynak": "Source", "Hava": "Weather", "Not": "Note", "Tarih–saat": "Date–time", "Süre": "Duration", "GPS doğruluğu": "GPS accuracy", "belirtilmedi": "not set", "konum yok": "no location", "ortalama": "average", "Senin ölçümün": "Your measurement", "Saha ölçümü": "Field measurement", "Saha ölçümlerimiz": "Our field measurements", "Menemen, 27.11.2026 · kalibre edilmiş": "Menemen, 27 Nov 2026 · calibrated", "Altlık yüklenemedi": "Basemap unavailable", "Konum alınamadı": "No location", "Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır. Konum ~100 m yuvarlanmıştır.": "Phone microphone not calibrated; values are approximate. Location rounded to ~100 m.", "Harita oluşturulamadı:": "Couldn't create the map:", "Yeni rozet!": "New badge!", "İlk ölçüm": "First measurement", "Kaşif": "Explorer", "Gece kuşu": "Night owl", "Sessiz köşe": "Quiet corner", "Gürültü avcısı": "Noise hunter", "Sabırlı ölçümcü": "Patient measurer", "Haritacı": "Mapmaker"};
+const SOZLUK = {"Ne ölçüyorsun?": "What are you measuring?", "Genel ölçüm": "General measurement", "Uyku odam yeterince sessiz mi?": "Is my bedroom quiet enough?", "Ders çalışma yerim yeterince sessiz mi?": "Is my study place quiet enough?", "Bu kafe ne kadar gürültülü?": "How noisy is this café?", "Gürültü Ölçer": "Noise Meter", "Tanıtım sürümü · ölçüm yapılır, kaydedilmez": "Demo version · measures, never saves", "Tanıtım sürümü.": "Demo version.", "Telefonunla ses düzeyini ölç, sonucunu ve konumlu sonuç haritanı gör. Hiçbir veri bir yere gönderilmez veya kaydedilmez. Bu uygulama Bakırçay Üniversitesi CBS stüdyosu dersinde saha ölçümleri için geliştirildi.": "Measure the sound level with your phone and see your result on a map. No data is sent or stored. This app was built for field measurements in a GIS studio course at Bakırçay University.", "GPS: bekleniyor": "GPS: waiting", "GPS: izin yok / hata": "GPS: no permission / error", "GPS yok": "No GPS", "Mikrofon: kapalı": "Microphone: off", "Mikrofon: açık": "Microphone: on", "Mikrofon: izin yok": "Microphone: no permission", "Mikrofon: HTTPS gerekli": "Microphone: HTTPS required", "Telefonu yerden 1,5 m yükseklikte (omuz hizası), duvardan en az 2 m uzakta tut. Mikrofonu kapatma.": "Hold the phone 1.5 m above the ground (shoulder height), at least 2 m from walls. Don't cover the microphone.", "Ölçüm süresi": "Duration", "Ölçümü başlat": "Start measuring", "İptal": "Cancel", "Ölçüm iptal edildi.": "Measurement cancelled.", "Ölçüm tamamlandı. Kaynağı ve havayı seçip sonuç haritanı oluşturabilirsin.": "Done. Pick the source and weather, then create your result map.", "Ölçüm sonucu": "Your result", "Ortalama ses düzeyi": "Average level", "En gürültülü an": "Loudest moment", "Gürültülü anlar": "Noisy moments", "Arka plan sesi": "Background", "Arka plan": "Background", "Ortalama": "Average", "Ölçüm boyunca ses düzeyi, dB(A)": "Sound level during measurement, dB(A)", "Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır ve telefona göre değişebilir.": "Phone microphones are not calibrated; values are approximate and vary by phone.", "Rozetlerin": "Your badges", "Baskın gürültü kaynağı": "Main noise source", "Seç…": "Choose…", "Karayolu trafiği": "Road traffic", "İnşaat / iş makinesi": "Construction / machinery", "İnsan kalabalığı / konuşma": "Crowd / talking", "Eğlence mekânı / müzik": "Venue / music", "Ticari faaliyet / pazar": "Shops / market", "Okul / oyun alanı": "School / playground", "Doğal (rüzgâr, kuş, su)": "Natural (wind, birds, water)", "Belirgin kaynak yok": "No clear source", "Diğer": "Other", "Hava durumu": "Weather", "Açık / sakin": "Clear / calm", "Bulutlu": "Cloudy", "Rüzgârlı": "Windy", "Yağmurlu": "Rainy", "Not (isteğe bağlı)": "Note (optional)", "Konum alınamadı; sonuç haritası konumsuz oluşturulur.": "No location; the result map is created without it.", "Haritada sağ üstten \"Saha ölçümlerimiz\" katmanını açıp kapatabilirsin.": "Use the top-right control to show or hide \"Our field measurements\".", "Sonuç haritamı oluştur": "Create my result map", "Sonuç haritamı yeniden oluştur": "Recreate my result map", "Harita hazırlanıyor…": "Preparing map…", "İndir": "Download", "Paylaş": "Share", "Konum gizlilik için yaklaşık (~100 m) gösterilir. Kart yalnızca telefonunda üretilir; hiçbir yere gönderilmez. Paylaşırken konumunun görüneceğini unutma.": "Location is shown approximately (~100 m) for privacy. The card is made on your phone and never sent anywhere. Your location is visible when you share it.", "Tanıtım sürümünde hiçbir veri gönderilmez veya kaydedilmez. Ses kaydı tutulmaz; ses telefonundan dışarı çıkmaz.": "The demo never sends or stores data. No audio is recorded; sound never leaves your phone.", "Özet": "Summary", "Kaynak": "Source", "Hava": "Weather", "Not": "Note", "Tarih–saat": "Date–time", "Süre": "Duration", "GPS doğruluğu": "GPS accuracy", "belirtilmedi": "not set", "konum yok": "no location", "ortalama": "average", "Senin ölçümün": "Your measurement", "Saha ölçümü": "Field measurement", "Saha ölçümlerimiz": "Our field measurements", "Menemen, 27.11.2026 · kalibre edilmiş": "Menemen, 27 Nov 2026 · calibrated", "Altlık yüklenemedi": "Basemap unavailable", "Konum alınamadı": "No location", "Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır. Konum ~100 m yuvarlanmıştır.": "Phone microphone not calibrated; values are approximate. Location rounded to ~100 m.", "Harita oluşturulamadı:": "Couldn't create the map:", "Yeni rozet!": "New badge!", "İlk ölçüm": "First measurement", "Kaşif": "Explorer", "Gece kuşu": "Night owl", "Sessiz köşe": "Quiet corner", "Gürültü avcısı": "Noise hunter", "Sabırlı ölçümcü": "Patient measurer", "Haritacı": "Mapmaker"};
 const DESEN = [["^Ölçülüyor… (\\d+) sn$", "Measuring… $1 s"], ["^(\\d+) saniye$", "$1 sec"], ["^(\\d+) dakika$", "$1 min"], ["^GPS: ±(\\d+) m$", "GPS: ±$1 m"], ["^Konum: (.+) — doğruluk düşük, açık alana çık\\.$", "Location: $1 — low accuracy, move to an open area."], ["^Konum: (.+)$", "Location: $1"], ["^(\\d+) sn$", "$1 s"], ["^(\\d+) dk$", "$1 min"]].map(([r, y]) => [new RegExp(r), y]);
 const D_IKON = { trafik: "🚗", insaat: "🚧", insan: "👥", eglence: "🎵", ticari: "🛒", okul: "🏫", dogal: "🐦", sessiz: "🤫", diger: "📍", "": "📍" };
 let dDil = ls.get("dDil", "tr");
@@ -446,7 +454,7 @@ function dDilUygula() {
   document.title = dDil === "en" ? "Noise Meter · Demo" : "Gürültü Ölçer · Tanıtım";
   $("dDilBtn").textContent = dDil === "en" ? "TR" : "EN";
   if (sonSonuc && !$("sonucKart").classList.contains("gizli")) {
-    dGrafikCiz(sonSonuc); dRozetCiz(); dHaritaGuncelle();
+    dGrafikCiz(sonSonuc); dRozetCiz(); dHaritaGuncelle(); dModGoster(sonSonuc);
     if (!$("dOzet").classList.contains("gizli")) $("kartOlustur").click();
   }
 }
@@ -580,8 +588,45 @@ function dHaritaGuncelle() {
 }
 $("kaynak").addEventListener("change", () => { if (dHSen) dHSen.setIcon(dPin(dRenk(sonSonuc.leq), D_IKON[$("kaynak").value] || "📍", 40)); });
 
+// ---- uyku / ders / kafe modları ----
+// Kaynak: Binaların Gürültüye Karşı Korunması Hakkında Yönetmelik (RG 31.05.2017, 30082), EK-4 Tablo 4.1,
+// C sınıfı (Madde 12(3): yeni binalarda en az C). Tablo yalnızca akustik tasarım amaçlıdır (dipnot 1).
+const MODLAR = {
+  uyku: { sinir: 34, tr: { ad: "Uyku odası", satir: "Konut · yatak odaları, gece (23.00–07.00)" },
+          en: { ad: "Bedroom", satir: "Housing · bedrooms, night (23:00–07:00)" }, gece: true },
+  ders: { sinir: 39, tr: { ad: "Ders çalışma yeri", satir: "Derslik, okuma odası, kütüphane, yurt etüd odası" },
+          en: { ad: "Study place", satir: "Classroom, reading room, library, dorm study room" } },
+  kafe: { sinir: 49, tr: { ad: "Kafe / lokanta", satir: "Lokantalar–yemek alanları, 24 saat (canlı müzikli mekânlar için gece 59 dB)" },
+          en: { ad: "Café / restaurant", satir: "Restaurants–dining areas, 24 h (venues with live music: 59 dB at night)" } },
+};
+$("dMod").value = ls.get("dMod", "genel");
+$("dMod").onchange = () => { ls.set("dMod", $("dMod").value); if (sonSonuc) dModGoster(sonSonuc); };
+function dModBilgi(s) {
+  const m = MODLAR[$("dMod").value];
+  if (!m) return null;
+  const fark = s.leq - m.sinir, L = m[dDil === "en" ? "en" : "tr"];
+  return { m, L, fark, ustunde: fark > 0 };
+}
+function dModGoster(s) {
+  const kutu = $("dModSonuc"), b = dModBilgi(s);
+  if (!b) { kutu.classList.add("gizli"); return; }
+  const en = dDil === "en", f = tr1(Math.abs(b.fark)), renk = b.ustunde ? "#fb923c" : "#34d399";
+  const h = new Date(s.zaman).getHours(), geceDisi = b.m.gece && !(h >= 23 || h < 7);
+  const yargi = en ? (b.ustunde ? `about ${f} dB above the limit` : `about ${f} dB below the limit`)
+                   : (b.ustunde ? `sınırın yaklaşık ${f} dB üstünde` : `sınırın yaklaşık ${f} dB altında`);
+  kutu.innerHTML = `<b>${esc(b.L.ad)}</b> · ${en ? "design limit" : "yönetmelikteki tasarım sınırı"} <b>${b.m.sinir} dB</b><br>`
+    + `<span style="color:${renk};font-weight:600">${en ? "Your result" : "Senin ölçümün"} ${tr1(s.leq)} dB(A): ${yargi}</span>`
+    + (geceDisi ? `<br><span style="color:#facc15">${en ? "This limit is for night hours (23:00–07:00); measure at night for a fair comparison." : "Bu sınır gece saatleri (23.00–07.00) içindir; adil karşılaştırma için gece ölç."}</span>` : "")
+    + `<br><span class="not">${esc(b.L.satir)}.<br>${en
+        ? "Source: Turkish Regulation on Protection of Buildings against Noise (Official Gazette 31.05.2017, no. 30082), Annex 4 Table 4.1, class C (minimum for new buildings). The table is for acoustic design; this is an approximate comparison with an uncalibrated phone."
+        : "Kaynak: Binaların Gürültüye Karşı Korunması Hakkında Yönetmelik (RG 31.05.2017, sayı 30082), EK-4 Tablo 4.1, C sınıfı (yeni binalarda en az). Tablo akustik tasarım amaçlıdır; bu, kalibre edilmemiş telefonla yaklaşık bir karşılaştırmadır."}</span>`;
+  kutu.classList.remove("gizli");
+  dGozlem.disconnect(); dGozle();
+}
+
 // ---- sonuç ekranı ----
 function demoSonucGoster(s) {
+  dModGoster(s);
   const tt = Math.max(0, Math.min(1, (s.leq - D_MIN) / (D_MAX - D_MIN)));
   $("dIsaret").style.left = `calc(${(tt * 100).toFixed(1)}% - 2px)`;
   ["rLeq", "rMax", "rL10", "rL90"].forEach((id, i) => $(id).textContent = tr1([s.leq, s.max, s.l10, s.l90][i]));
@@ -670,7 +715,10 @@ async function dKartCiz() {
   [30, 45, 60, 75, 90].forEach((v, i) => { const lx = 40 + i / 4 * (W - 80), m = String(v); g.fillText(m, Math.min(lx, W - 40 - g.measureText(m).width), cy2 + 50); });
   const ozet = `${t("Kaynak")}: ${o.kaynak}  ·  ${t("Hava")}: ${o.hava}  ·  ${t("Süre")}: ${o.sure}  ·  GPS ${o.gps}`;
   g.fillStyle = "#e2e8f0"; dSigdir(g, ozet, W - 120, 28, false); g.fillText(ozet, 60, 1196);
-  if (o.not) { const nt = t("Not") + ": " + (o.not.length > 70 ? o.not.slice(0, 69) + "…" : o.not); g.fillStyle = "#cbd5e1"; dSigdir(g, nt, W - 120, 26, false); g.fillText(nt, 60, 1238); }
+  const mb = dModBilgi(s);
+  const alt2 = mb ? `${mb.L.ad}: ${dDil === "en" ? "limit" : "sınır"} ${mb.m.sinir} dB · ${mb.ustunde ? "+" : "−"}${tr1(Math.abs(mb.fark))} dB`
+                  : (o.not ? t("Not") + ": " + (o.not.length > 70 ? o.not.slice(0, 69) + "…" : o.not) : "");
+  if (alt2) { g.fillStyle = mb ? (mb.ustunde ? "#fb923c" : "#34d399") : "#cbd5e1"; dSigdir(g, alt2, W - 120, 26, !!mb); g.fillText(alt2, 60, 1238); }
   g.fillStyle = "#64748b"; dSigdir(g, t("Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır. Konum ~100 m yuvarlanmıştır."), W - 120, 21, false);
   g.fillText(t("Telefon mikrofonu kalibre edilmemiştir; değerler yaklaşıktır. Konum ~100 m yuvarlanmıştır."), 60, 1282);
   g.fillStyle = D_VURGU; g.font = "bold 22px system-ui, sans-serif";
